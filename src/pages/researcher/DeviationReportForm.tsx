@@ -26,7 +26,7 @@ const initialInvestigator = {
   piSignature: '',
   rationale: '',
   impact: '',
-  type: '', // <-- add type
+  type: '', 
 };
 
 const initialRecReview = {

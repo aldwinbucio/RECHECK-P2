@@ -31,6 +31,7 @@ import ReviewerDashboard from './pages/reviewer/Dashboard';
 import RDashboard from './pages/researcher/Dashboard';
 import AssignedReviews from './pages/reviewer/AssignedReviews';
 import ReviewDetails from './pages/reviewer/ReviewDetails';
+import Announcements from './pages/Announcements';
 
 
 function App() {
@@ -163,6 +164,12 @@ function App() {
             <Route path="/rdevi1" element={
               <ProtectedRoute allowedRoles={["Researcher"]}>
                 <DeviationReportForm />
+              </ProtectedRoute>
+            } />
+            {/* Announcements - accessible to Staff, Researcher, Reviewer */}
+            <Route path="/announcements" element={
+              <ProtectedRoute allowedRoles={["Staff","Researcher","Reviewer"]}>
+                <Announcements />
               </ProtectedRoute>
             } />
             {/* Fallback */}

@@ -9,6 +9,7 @@ export const sidebarMenus = {
   { title: "Review Submission", url: "/sreview-submission", icon: BookCopy },
   { title: "Deviation Management", url: "/sdevi", icon: PencilRuler },
   { title: "Create Announcement", url: "/screate-announcement", icon: Megaphone },
+  { title: "Announcements", url: "/announcements", icon: Megaphone },
   { title: "Message", url: "/smessages", icon: MessageCircle },
   { title: "Settings", url: "/staff/settings", icon: Settings },
   ],
@@ -30,6 +31,7 @@ export const sidebarMenus = {
   url: "/smessages",
       icon: MessageCircle,
     },
+  { title: "Announcements", url: "/announcements", icon: Megaphone },
     {
       title: "Settings",
   // settings page not implemented separately; keep placeholder
@@ -54,6 +56,7 @@ export const sidebarMenus = {
   url: "/smessages",
       icon: MessageCircle,
     },
+  { title: "Announcements", url: "/announcements", icon: Megaphone },
     {
       title: "Settings",
   url: "/reviewer/settings",

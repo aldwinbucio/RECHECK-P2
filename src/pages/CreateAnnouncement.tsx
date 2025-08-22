@@ -1,15 +1,72 @@
 import React, { useState } from 'react';
-
+import { supabase } from '@/lib/supabase';
+import useAuth from '@/hooks/useAuth';
 
 export default function CreateAnnouncement() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [audience, setAudience] = useState<'students' | 'committee' | null>(null);
+  const [audience, setAudience] = useState<'students' | 'committee' | 'all' | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const { user } = useAuth();
 
   const handleAttachment = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setAttachments(Array.from(e.target.files));
+    }
+  };
+
+  const handleAnnounce = async () => {
+    setMessage(null);
+    if (!title.trim()) return setMessage('Title is required');
+    if (!audience) return setMessage('Please select an audience');
+    setLoading(true);
+    try {
+      // upload attachments to storage bucket 'announcements' (create this bucket in Supabase)
+      const urls: string[] = [];
+      for (const file of attachments) {
+        const key = `announcements/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from('announcements').upload(key, file, { upsert: true });
+        if (upErr) {
+          console.error('upload error', upErr);
+          setMessage('Failed to upload attachments');
+          setLoading(false);
+          return;
+        }
+        const { data } = supabase.storage.from('announcements').getPublicUrl(key);
+        urls.push(data.publicUrl);
+      }
+
+      // insert announcement row
+      const payload: any = {
+        title: title.trim(),
+        description: description.trim(),
+        audience: audience,
+        attachments: urls,
+        created_by: (user as any)?.id || null,
+        created_by_email: (user as any)?.email || null,
+      };
+
+      const { error: insertErr } = await supabase.from('announcements').insert(payload);
+      if (insertErr) {
+        console.error('insert error', insertErr);
+        setMessage('Failed to save announcement');
+        setLoading(false);
+        return;
+      }
+
+      setTitle('');
+      setDescription('');
+      setAudience(null);
+      setAttachments([]);
+      setMessage('Announcement published');
+    } catch (err) {
+      console.error(err);
+      setMessage('Unexpected error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -80,6 +137,13 @@ export default function CreateAnnouncement() {
             >
               Committee
             </button>
+            <button
+              type="button"
+              className={`border rounded-lg px-5 py-2 font-medium transition ${audience === 'all' ? 'bg-blue-700 text-white border-blue-700' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-blue-50'}`}
+              onClick={() => setAudience('all')}
+            >
+              All
+            </button>
           </div>
         </div>
         <div>
@@ -89,7 +153,7 @@ export default function CreateAnnouncement() {
               <div className="font-bold text-xl mb-1 text-blue-900">{title || 'Announcement Title'}</div>
               <div className="text-base text-gray-700 whitespace-pre-line">{description || 'Announcement description will appear here.'}</div>
               <div className="mt-2 text-xs text-blue-700">
-                {audience ? `Audience: ${audience === 'students' ? 'All Students' : 'Committee'}` : 'Select audience'}
+                {audience ? `Audience: ${audience === 'students' ? 'All Students' : audience === 'committee' ? 'Committee' : 'All'}` : 'Select audience'}
               </div>
               {attachments.length > 0 && (
                 <div className="mt-2 text-xs text-blue-500">
@@ -100,9 +164,12 @@ export default function CreateAnnouncement() {
           </div>
         </div>
         <div className="flex justify-end gap-4 mt-8">
-          <button className="text-gray-500 hover:underline font-medium" type="button">Cancel</button>
-          <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200" type="button">Announce</button>
+          <button className="text-gray-500 hover:underline font-medium" type="button" onClick={() => { setTitle(''); setDescription(''); setAudience(null); setAttachments([]); }}>Cancel</button>
+          <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200" type="button" onClick={handleAnnounce} disabled={loading}>
+            {loading ? 'Publishing...' : 'Announce'}
+          </button>
         </div>
+        {message && <div className="text-sm text-center text-gray-700 mt-2">{message}</div>}
       </div>
     </div>
   );
