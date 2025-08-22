@@ -1,61 +1,49 @@
-import { useEffect } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate } from 'react-router-dom';
 import useAuth from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
+import Unauthorized from '@/pages/Unauthorized';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
   allowedRoles: string[];
+  children: React.ReactNode;
 }
 
-export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [checkingRole, setCheckingRole] = useState(true);
+export default function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
+  const { user, loading: authLoading } = useAuth();
+  const { role, loading: roleLoading } = useUserRole(user);
 
-  useEffect(() => {
-    if (user) {
-      checkUserRole();
-    } else {
-      setCheckingRole(false);
-    }
-  }, [user]);
-
-  const checkUserRole = async () => {
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('role')
-        .eq('email', user?.email)
-        .single();
-      
-      if (userData?.role) {
-        setUserRole(userData.role);
-      }
-    } catch (error) {
-      console.error('Error checking user role:', error);
-    } finally {
-      setCheckingRole(false);
-    }
-  };
-
-  if (loading || checkingRole) {
+  // Avoid redirecting while auth/role are loading
+  if (authLoading || roleLoading) {
+    console.debug('ProtectedRoute: waiting for auth/role', { authLoading, roleLoading });
     return <div>Loading...</div>;
   }
 
   if (!user) {
+    console.debug('ProtectedRoute: no user, redirect to login');
     return <Navigate to="/login" replace />;
   }
 
-  if (!allowedRoles.includes(userRole)) {
+  // If role couldn't be determined, show unauthorized rather than redirecting to login
+  if (!role) {
+    console.debug('ProtectedRoute: role not found for user', { user });
+    return <Unauthorized />;
+  }
+
+  // Normalize role/allowedRoles for comparison
+  const normalizedRole = role ? role.toLowerCase() : '';
+  const normalizedAllowed = allowedRoles.map(r => r.toLowerCase());
+
+  if (!normalizedAllowed.includes(normalizedRole)) {
+    console.debug('ProtectedRoute: role not allowed', { role, allowedRoles });
     // Redirect to appropriate dashboard based on role
-    if (userRole === 'researcher') {
+    if (normalizedRole === 'researcher') {
       return <Navigate to="/researcher/dashboard" replace />;
-    } else if (userRole === 'reviewer') {
+    } else if (normalizedRole === 'reviewer') {
       return <Navigate to="/reviewer/dashboard" replace />;
-    } else if (userRole === 'staff') {
+    } else if (normalizedRole === 'staff') {
       return <Navigate to="/staff/dashboard" replace />;
     }
-    return <Navigate to="/login" replace />;
+    return <Unauthorized />;
   }
 
   return <>{children}</>;

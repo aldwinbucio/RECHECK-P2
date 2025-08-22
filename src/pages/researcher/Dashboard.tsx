@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import type { ResearcherDeviationReport } from '../../types/deviationReport';
 import { getResearcherNotifications } from '../../services/notificationService';
+import useAuth from '@/hooks/useAuth';
 import type { Notification } from '../../types/notification';
 
 
@@ -28,16 +29,52 @@ const RDashboard = () => {
         }, 350); // Animation duration
     };
 
+    const { user } = useAuth();
+
     useEffect(() => {
-        setLoading(true);
-        supabase
-            .from('deviation_reports')
-            .select('*')
-            .order('report_submission_date', { ascending: false })
-            .then(({ data }) => {
-                setSubmissions(data || []);
-                // Find reviewed submissions (severity set)
-                const reviewed = (data || []).filter((d: any) => d.severity && d.severity !== '').map((d: any) => ({
+        const load = async () => {
+            setLoading(true);
+
+            const email = user?.email;
+            if (!email) {
+                setSubmissions([]);
+                setReviewedNotifs([]);
+                setLoading(false);
+            } else {
+                // Build reporter candidates similar to Submissions page
+                const candidates: string[] = [email];
+                const metaAny: any = (user as any)?.user_metadata;
+                if (metaAny) {
+                    if (metaAny.full_name) candidates.push(metaAny.full_name);
+                    if (metaAny.name) candidates.push(metaAny.name);
+                }
+                const localPart = email.split('@')[0];
+                if (localPart) candidates.push(localPart);
+
+                const { data, error } = await supabase
+                    .from('deviation_reports')
+                    .select('*')
+                    .in('reported_by', candidates)
+                    .order('report_submission_date', { ascending: false });
+
+                let rows = data || [];
+                if ((!rows || rows.length === 0)) {
+                    // fallback: fetch all and filter client-side
+                    const { data: allData, error: allErr } = await supabase.from('deviation_reports').select('*').order('report_submission_date', { ascending: false });
+                    if (!allErr) {
+                        const lowerCandidates = candidates.map(c => c.toLowerCase());
+                        rows = (allData || []).filter((r: any) => {
+                            const rep = (r.reported_by || '').toString().toLowerCase();
+                            return lowerCandidates.some(c => rep.includes(c));
+                        });
+                    } else {
+                        console.error('Error fetching deviation_reports for dashboard fallback', allErr);
+                        rows = [];
+                    }
+                }
+
+                setSubmissions(rows || []);
+                const reviewed = (rows || []).filter((d: any) => d.severity && d.severity !== '').map((d: any) => ({
                     id: `reviewed-${d.id}`,
                     type: 'reviewed',
                     title: 'Proposal Reviewed',
@@ -46,13 +83,38 @@ const RDashboard = () => {
                 }));
                 setReviewedNotifs(reviewed);
                 setLoading(false);
-            });
-        setNotifLoading(true);
-        getResearcherNotifications().then(({ data }) => {
-            setNotifications(data || []);
-            setNotifLoading(false);
-        });
-    }, []);
+            }
+
+            // Notifications: filter researcher notifications by recipient or broadcast
+            setNotifLoading(true);
+            const { data: notifData, error: notifErr } = await getResearcherNotifications();
+            if (notifErr) {
+                console.error('Error fetching notifications', notifErr);
+                setNotifications([]);
+                setNotifLoading(false);
+            } else {
+                const allNotifs = notifData || [];
+                if (!user?.email) {
+                    setNotifications([]);
+                } else {
+                    const lowerEmail = user.email.toLowerCase();
+                    // Assuming notifications have a 'recipient' field (email) or 'broadcast' flag
+                    const filtered = (allNotifs).filter((n: any) => {
+                        if (!n) return false;
+                        if (n.broadcast) return true; // keep broadcasts
+                        if (n.recipient && typeof n.recipient === 'string' && n.recipient.toLowerCase() === lowerEmail) return true;
+                        // also allow recipient list arrays
+                        if (Array.isArray(n.recipient) && n.recipient.map((r: string) => r.toLowerCase()).includes(lowerEmail)) return true;
+                        return false;
+                    });
+                    setNotifications(filtered);
+                }
+                setNotifLoading(false);
+            }
+        };
+
+        load();
+    }, [user]);
 
     return (
         <div className="max-w-4xl mx-auto py-10 px-4">

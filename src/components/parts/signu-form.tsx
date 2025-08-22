@@ -20,13 +20,12 @@ export function SignupForm({
         email: "",
         password: "",
         confirmPassword: "",
-        role: "researcher" // Default role
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const navigate = useNavigate()
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
             ...formData,
             [e.target.id]: e.target.value
@@ -60,7 +59,7 @@ export function SignupForm({
                 options: {
                     data: {
                         full_name: formData.fullName,
-                        role: formData.role
+                        // role intentionally omitted — will be assigned manually in Supabase
                     }
                 }
             })
@@ -115,18 +114,7 @@ export function SignupForm({
                                 required
                             />
                             
-                            <Label htmlFor="role">Role</Label>
-                            <select 
-                                id="role" 
-                                value={formData.role} 
-                                onChange={handleChange}
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                                required
-                            >
-                                <option value="researcher">Researcher</option>
-                                <option value="reviewer">Reviewer</option>
-                                <option value="staff">Staff</option>
-                            </select>
+
 
                             <Label htmlFor="password">Password</Label>
                             <Input

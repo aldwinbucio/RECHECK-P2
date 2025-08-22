@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { submitDeviationReport } from '../../services/deviationReportService';
 import { supabase } from '../../lib/supabase';
+import useAuth from '@/hooks/useAuth';
 
 const initialInvestigator = {
   protocolCode: '',
@@ -20,7 +21,7 @@ const initialInvestigator = {
   correctiveAction: '',
   assessmentSeverity: '',
   deviationDate: '',
-  reportedBy: '',
+  reportedBy: undefined as string | undefined,
   reportDate: '',
   piSignature: '',
   rationale: '',
@@ -96,6 +97,15 @@ const DeviationReportForm = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitted, setSubmitted] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // auto-fill reportedBy with authenticated user's email so storage matches Submissions filter
+    if (user?.email) {
+      setInvestigator(prev => ({ ...prev, reportedBy: String(user.email) }));
+    }
+  }, [user]);
 
   // Validation helpers
 const validate = () => {
@@ -260,8 +270,16 @@ if (error) {
             </div>
           </div>
           <div className="border-t border-blue-100 pt-6">
-            <label className="block font-semibold mb-1 text-blue-900">Submitted By</label>
-            <input className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base" name="reportedBy" value={investigator.reportedBy} onChange={handleInvestigatorChange} required placeholder="Enter your name" />
+            <label className="block font-semibold mb-1 text-blue-900">Submitted By (your email)</label>
+            <input
+              className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition text-base"
+              name="reportedBy"
+              value={investigator.reportedBy}
+              onChange={handleInvestigatorChange}
+              required
+              placeholder="Your email"
+              readOnly
+            />
           </div>
           <div>
             <label className="block font-semibold mb-1 text-blue-900">Submission Date</label>

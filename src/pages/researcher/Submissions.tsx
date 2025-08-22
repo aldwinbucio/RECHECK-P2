@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import useAuth from '@/hooks/useAuth';
 import type { ResearcherDeviationReport } from '../../types/deviationReport';
 
 const RSubmissions = () => {
@@ -15,20 +16,73 @@ const RSubmissions = () => {
     const PAGE_SIZE = 5;
     const [typeOptions, setTypeOptions] = useState<string[]>(['All']);
 
+    const { user } = useAuth();
+
     useEffect(() => {
         setLoading(true);
-        supabase
-            .from('deviation_reports')
-            .select('*')
-            .order('report_submission_date', { ascending: false })
-            .then(({ data }) => {
-                setSubmissions(data || []);
-                // Collect unique types for filter
-                const uniqueTypes = Array.from(new Set((data || []).map((row: any) => row.type).filter((t: string) => t && t !== '')));
-                setTypeOptions(['All', ...uniqueTypes]);
+        // Only fetch submissions reported by the logged-in researcher
+        const fetch = async () => {
+            try {
+                const email = user?.email;
+                if (!email) {
+                    setSubmissions([]);
+                    setTypeOptions(['All']);
+                    setLoading(false);
+                    return;
+                }
+
+                // Some existing reports may have 'reported_by' stored as a name instead of email.
+                // Build a list of candidate reporter identifiers to match: email, possible full name and local-part.
+                const candidates: string[] = [email];
+                const metaAny: any = (user as any)?.user_metadata;
+                if (metaAny) {
+                    if (metaAny.full_name) candidates.push(metaAny.full_name);
+                    if (metaAny.name) candidates.push(metaAny.name);
+                }
+                const localPart = email.split('@')[0];
+                if (localPart) candidates.push(localPart);
+
+                const { data, error } = await supabase
+                    .from('deviation_reports')
+                    .select('*')
+                    .in('reported_by', candidates)
+                    .order('report_submission_date', { ascending: false });
+
+                if (error) {
+                    console.error('Error fetching researcher submissions', error);
+                    setSubmissions([]);
+                } else {
+                    console.debug('Initial fetch result count:', (data || []).length, 'candidates:', candidates);
+                    let rows = data || [];
+
+                    // If primary .in() query returned no rows, try a broader client-side filter as fallback
+                    if ((!rows || rows.length === 0)) {
+                        console.debug('No rows found with .in(); fetching all reports as fallback');
+                        const { data: allData, error: allErr } = await supabase.from('deviation_reports').select('*').order('report_submission_date', { ascending: false });
+                        if (allErr) {
+                            console.error('Error fetching all deviation reports for fallback', allErr);
+                            rows = [];
+                        } else {
+                            const lowerCandidates = candidates.map(c => c.toLowerCase());
+                            rows = (allData || []).filter((r: any) => {
+                                const rep = (r.reported_by || '').toString().toLowerCase();
+                                return lowerCandidates.some(c => rep.includes(c));
+                            });
+                            console.debug('Fallback filtered rows count:', rows.length);
+                        }
+                    }
+
+                    setSubmissions(rows || []);
+                    const uniqueTypes = Array.from(new Set((rows || []).map((row: any) => row.type).filter((t: string) => t && t !== '')));
+                    setTypeOptions(['All', ...uniqueTypes]);
+                }
+            } finally {
                 setLoading(false);
-            });
-    }, []);
+            }
+        };
+
+        fetch();
+    }, [user]);
 
     // Filtered and paginated data
     const statusOptions = ['All', 'Pending / View', 'Reviewed'];
@@ -44,14 +98,6 @@ const RSubmissions = () => {
     useEffect(() => {
         if (page > totalPages) setPage(1);
     }, [filtered.length, totalPages]);
-
-    // Helper to get feedback text for a row
-    const getFeedbackText = (sub: any) => {
-        if (sub.severity === 'Major') {
-            return sub.corrective_action_feedback || '';
-        }
-        return sub.review || '';
-    };
 
     // Helper to determine if feedback exists
     const hasFeedback = (sub: any) => {

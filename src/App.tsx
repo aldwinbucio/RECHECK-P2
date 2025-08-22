@@ -3,6 +3,7 @@
 import ReviewSubmission from './pages/staff/ReviewSubmission';
 import AssignReviewer from './pages/staff/AssignReviewer';
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import { AppBreadcrumb } from './components/parts/app-breadcrumb';
 import { SidebarProvider } from './components/ui/sidebar';
 
@@ -60,27 +61,112 @@ function App() {
             </SidebarProvider>
 
           }>
-            <Route path="/" element={<SDashboard />} />
-            <Route path="/sdash" element={<SDashboard />} />
-            <Route path="/sdash/sub1" element={<STrends />} />
-            <Route path="/sassign-reviewer" element={<AssignReviewer />} />
-            <Route path="/sreview-submission" element={<ReviewSubmission />} />
-            <Route path="/sdevi" element={<SDeviations />} />
-            <Route path="/staff/deviations/:id" element={<DeviationDetail />} />
-            <Route path="/rdevi" element={<RDeviations />} />
-            <Route path="/rdevi1" element={<DeviationReportForm />} />
-            <Route path="/ssubm" element={<SSubmissions />} />
-            <Route path="/ssubm/sub1" element={<SSubmissions />} />
-            <Route path="/screate-announcement" element={<CreateAnnouncement />} />
-            <Route path="/smessages" element={<Message />} />
+            {/* Staff routes */}
+            <Route path="/" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <SDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/sdash" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <SDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/sdash/sub1" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <STrends />
+              </ProtectedRoute>
+            } />
+            <Route path="/sassign-reviewer" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <AssignReviewer />
+              </ProtectedRoute>
+            } />
+            <Route path="/sreview-submission" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <ReviewSubmission />
+              </ProtectedRoute>
+            } />
+            <Route path="/sdevi" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <SDeviations />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/deviations/:id" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <DeviationDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/ssubm" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <SSubmissions />
+              </ProtectedRoute>
+            } />
+            <Route path="/ssubm/sub1" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <SSubmissions />
+              </ProtectedRoute>
+            } />
+            <Route path="/screate-announcement" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <CreateAnnouncement />
+              </ProtectedRoute>
+            } />
+            <Route path="/smessages" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <Message />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/corrective-action-request" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <CorrectiveActionRequest />
+              </ProtectedRoute>
+            } />
+            {/* Reviewer routes */}
+            <Route path="/reviewer/dashboard" element={
+              <ProtectedRoute allowedRoles={["Reviewer"]}>
+                <ReviewerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/reviewerreviews" element={
+              <ProtectedRoute allowedRoles={["Reviewer"]}>
+                <AssignedReviews />
+              </ProtectedRoute>
+            } />
+            <Route path="/reviewer/review-details" element={
+              <ProtectedRoute allowedRoles={["Reviewer"]}>
+                <ReviewDetails />
+              </ProtectedRoute>
+            } />
+            {/* Researcher routes */}
+            <Route path="/researcher/dashboard" element={
+              <ProtectedRoute allowedRoles={["Researcher"]}>
+                <RDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/researcher/feedback/:id" element={
+              <ProtectedRoute allowedRoles={["Researcher"]}>
+                <FeedbackDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/researcher/submissions" element={
+              <ProtectedRoute allowedRoles={["Researcher"]}>
+                <RSubmissions />
+              </ProtectedRoute>
+            } />
+            {/* Researcher deviation routes */}
+            <Route path="/rdevi" element={
+              <ProtectedRoute allowedRoles={["Researcher"]}>
+                <RDeviations />
+              </ProtectedRoute>
+            } />
+            <Route path="/rdevi1" element={
+              <ProtectedRoute allowedRoles={["Researcher"]}>
+                <DeviationReportForm />
+              </ProtectedRoute>
+            } />
+            {/* Fallback */}
             <Route path="*" element={<SDashboard />} />
-            <Route path="/reviewer/dashboard" element={<ReviewerDashboard />} />
-            <Route path="/reviewerreviews" element={<AssignedReviews />} />
-           <Route path="/reviewer/review-details" element={<ReviewDetails />} />
-           <Route path="/staff/corrective-action-request" element={<CorrectiveActionRequest />} />
-          <Route path="/researcher/dashboard" element={<RDashboard />} />
-          <Route path="/researcher/feedback/:id" element={<FeedbackDetail />} />
-          <Route path="/researcher/submissions" element={<RSubmissions />} />
           </Route>
         </Routes>
       </Router>

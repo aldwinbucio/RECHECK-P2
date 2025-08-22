@@ -1,87 +1,43 @@
 'use client';
 
 import * as React from 'react';
+
 import { data as DATA } from "@/Data"
+import { sidebarMenus } from "@/constants/sidebarMenus"
+import type { NavItem } from "@/Data"
+import useAuth from "@/hooks/useAuth"
+import { useUserRole } from "@/hooks/useUserRole"
 
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
-import {
   SidebarProvider,
-  SidebarInset,
   SidebarTrigger,
   Sidebar,
   SidebarHeader,
   SidebarContent,
   SidebarFooter,
-  SidebarRail,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-  SidebarMenuAction,
 } from '@/components/animate-ui/radix/sidebar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/animate-ui/radix/collapsible';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from '@/components/animate-ui/radix/dropdown-menu';
-import {
-  AudioWaveform,
-  BadgeCheck,
-  Bell,
-  BookOpen,
-  Bot,
-  ChevronRight,
-  ChevronsUpDown,
-  Command,
-  CreditCard,
-  Folder,
-  Forward,
-  Frame,
-  GalleryVerticalEnd,
-  LogOut,
-  Map,
-  MoreHorizontal,
-  PieChart,
-  Plus,
-  Settings2,
-  Sparkles,
-  SquareTerminal,
-  Trash2,
-} from 'lucide-react';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/animate-ui/radix/dropdown-menu';
+import { BadgeCheck, ChevronsUpDown } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Link } from 'react-router';
+import { Link } from 'react-router-dom';
+
 
 
 export function RadixSidebarDemo({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const { role: userRole, loading: roleLoading } = useUserRole(user);
   const main = DATA.main[0];
+
+  // Use fetched role or fallback
+  const role: keyof typeof sidebarMenus = (userRole as keyof typeof sidebarMenus) || (DATA.user.role as keyof typeof sidebarMenus) || "Researcher";
+  const menu: NavItem[] = sidebarMenus[role] || sidebarMenus["Researcher"];
 
   return (
     <>
@@ -119,47 +75,19 @@ export function RadixSidebarDemo({ ...props }: React.ComponentProps<typeof Sideb
             <SidebarGroup>
               <SidebarGroupLabel>Platform</SidebarGroupLabel>
               <SidebarMenu>
-                {DATA.navMain.map((item) => (
-                  item.items && item.items.length > 0 ? (
-                    <Collapsible key={item.title}>
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title}>
-                            {item.icon && <item.icon />}
-                            <span>{item.title}</span>
-                            <ChevronRight className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {item.items.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild>
-                                  <Link to={subItem.url}>
-                                    <span>{subItem.title}</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  ) : (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild tooltip={item.title}>
-                        <Link to={item.url}>
-                          {item.icon && <item.icon />}
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
+                {menu.map((item: NavItem) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild tooltip={item.title}>
+                      <Link to={item.url}>
+                        {item.icon && <item.icon />}
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroup>
             {/* Nav Main */}
-
           </SidebarContent>
           <SidebarFooter>
             {/* Nav User */}
@@ -249,4 +177,4 @@ export function RadixSidebarDemo({ ...props }: React.ComponentProps<typeof Sideb
       </SidebarProvider >
     </>
   );
-};
+}

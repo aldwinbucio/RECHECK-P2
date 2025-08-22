@@ -48,8 +48,8 @@ export function LoginForm({
                 if (userData?.role) {
                     navigate(`/${userData.role}/dashboard`)
                 } else {
-                    // Default redirect if no role found
-                    navigate('/researcher/dashboard')
+                    // If no role assigned yet, send user to Unauthorized so they can't access researcher/staff areas
+                    navigate('/unauthorized')
                 }
             }
         } catch (error) {
