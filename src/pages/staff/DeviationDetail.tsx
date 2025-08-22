@@ -62,7 +62,7 @@ const DeviationDetail = () => {
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
           <div className="flex flex-col items-center mb-4">
               <img
-            src={deviation.imageUrl || 'https://lh6.googleusercontent.com/1RkIfe50kuc7VWGIOkbHa1HStlMwxFxas58tY8H0gDx9buTWFoId6iwTqg3DKJpVBbnQDsQMmj3TYpqFnpu_e9l63JM9WV-MYeT_UsKP7PXEzaZiAihYictZHcDf7MMQBH7DIipsmg=w16383'}
+            src={deviation.imageUrl || 'https://lh4.googleusercontent.com/JyzxNMuihT_BFod_JwF_Y459mT0Whe8820zJ-BxLvkSNrHy4iqgJRoaAq4pUcx9Hj5OHdIur0zIUN668qYcS8sxM3E5RHHcGLKeKCNxtjLUqt6uTKE9-45m4xjgkRDEAGvQUVpX7Jw=w16383'}
               alt="Research"
             className="w-40 h-40 rounded-2xl object-contain border border-gray-200 shadow-sm bg-gray-100 mb-2"
             style={{ minWidth: '160px', maxWidth: '100%', maxHeight: '200px' }}

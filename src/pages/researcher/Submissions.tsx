@@ -20,7 +20,7 @@ const RSubmissions = () => {
 
     useEffect(() => {
         setLoading(true);
-        // Only fetch submissions reported by the logged-in researcher
+      
         const fetch = async () => {
             try {
                 const email = user?.email;
