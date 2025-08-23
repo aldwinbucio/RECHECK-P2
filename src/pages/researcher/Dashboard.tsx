@@ -16,17 +16,17 @@ const RDashboard = () => {
     const [notifLoading, setNotifLoading] = useState(true);
     const [reviewedNotifs, setReviewedNotifs] = useState<any[]>([]);
 
-    // Animation state for notifications being removed
+ 
     const [removingIds, setRemovingIds] = useState<string[]>([]);
 
-    // Handler to remove a notification by id with animation
+   
     const handleRemoveNotification = (id: string) => {
         setRemovingIds((prev) => [...prev, id]);
         setTimeout(() => {
             setNotifications((prev) => prev.filter((n) => n.id !== id));
             setReviewedNotifs((prev) => prev.filter((n) => n.id !== id));
             setRemovingIds((prev) => prev.filter((remId) => remId !== id));
-        }, 350); // Animation duration
+        }, 350); 
     };
 
     const { user } = useAuth();
@@ -41,7 +41,7 @@ const RDashboard = () => {
                 setReviewedNotifs([]);
                 setLoading(false);
             } else {
-                // Build reporter candidates similar to Submissions page
+               
                 const candidates: string[] = [email];
                 const metaAny: any = (user as any)?.user_metadata;
                 if (metaAny) {
@@ -77,15 +77,15 @@ const RDashboard = () => {
                 const reviewed = (rows || []).filter((d: any) => d.severity && d.severity !== '').map((d: any) => ({
                     id: `reviewed-${d.id}`,
                     type: 'reviewed',
-                    title: 'Proposal Reviewed',
-                    description: `Your proposal "${d.protocol_title}" has been reviewed.`,
+                    title: 'Deviation Reviewed',
+                    description: `Your Deviation "${d.protocol_title}" has been reviewed.`,
                     date: d.reviewed_at || d.updated_at || d.report_submission_date
                 }));
                 setReviewedNotifs(reviewed);
                 setLoading(false);
             }
 
-            // Notifications: filter researcher notifications by recipient or broadcast
+           
             setNotifLoading(true);
             const { data: notifData, error: notifErr } = await getResearcherNotifications();
             if (notifErr) {
@@ -98,12 +98,12 @@ const RDashboard = () => {
                     setNotifications([]);
                 } else {
                     const lowerEmail = user.email.toLowerCase();
-                    // Assuming notifications have a 'recipient' field (email) or 'broadcast' flag
+                 
                     const filtered = (allNotifs).filter((n: any) => {
                         if (!n) return false;
                         if (n.broadcast) return true; // keep broadcasts
                         if (n.recipient && typeof n.recipient === 'string' && n.recipient.toLowerCase() === lowerEmail) return true;
-                        // also allow recipient list arrays
+                     
                         if (Array.isArray(n.recipient) && n.recipient.map((r: string) => r.toLowerCase()).includes(lowerEmail)) return true;
                         return false;
                     });
