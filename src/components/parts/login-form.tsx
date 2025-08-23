@@ -37,7 +37,7 @@ export function LoginForm({
                 return
             }
 
-            // Successful login - get user role from users table
+          
             if (data.user) {
                 const { data: userData } = await supabase
                     .from('users')
@@ -48,7 +48,7 @@ export function LoginForm({
                 if (userData?.role) {
                     navigate(`/${userData.role}/dashboard`)
                 } else {
-                    // If no role assigned yet, send user to Unauthorized so they can't access researcher/staff areas
+                   
                     navigate('/unauthorized')
                 }
             }

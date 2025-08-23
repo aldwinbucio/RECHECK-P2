@@ -35,7 +35,7 @@ export function RadixSidebarDemo({ ...props }: React.ComponentProps<typeof Sideb
   const { role: userRole, loading: roleLoading } = useUserRole(user);
   const main = DATA.main[0];
 
-  // Use fetched role or fallback
+  
   const role: keyof typeof sidebarMenus = (userRole as keyof typeof sidebarMenus) || (DATA.user.role as keyof typeof sidebarMenus) || "Researcher";
   const menu: NavItem[] = sidebarMenus[role] || sidebarMenus["Researcher"];
 

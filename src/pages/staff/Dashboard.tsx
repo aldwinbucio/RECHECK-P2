@@ -23,6 +23,8 @@ const SDashboard: React.FC = () => {
     const [approvedCount, setApprovedCount] = useState(0);
     const [activities, setActivities] = useState<any[]>([]);
     const [removingIds, setRemovingIds] = useState<string[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 5;
     const [deadlines, setDeadlines] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -138,35 +140,59 @@ const SDashboard: React.FC = () => {
                             ) : activities.length === 0 ? (
                                 <div className="text-gray-400">No recent activities.</div>
                             ) : (
+                                <>
                                 <ul className="space-y-3">
-                                    {activities.map((a: any) => {
-                                        const isRemoving = removingIds.includes(a.id);
-                                        return (
-                                            <li
-                                                key={a.id}
-                                                className={`flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transform transition-all duration-300 ${isRemoving ? 'opacity-0 translate-x-6' : 'opacity-100 translate-x-0'}`}>
-                                                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-semibold">📄</div>
-                                                <div className="flex-1">
-                                                    <div className="font-medium">{a.title}</div>
-                                                    <div className="text-sm text-gray-500">{new Date(a.date || a.created_at || '').toLocaleString()}</div>
-                                                </div>
-                                                <button
-                                                    aria-label="Remove"
-                                                    className="text-gray-400 hover:text-red-500 p-1 rounded"
-                                                    onClick={() => {
-                                                        setRemovingIds(prev => [...prev, a.id]);
-                                                        setTimeout(() => {
-                                                            setActivities(prev => prev.filter((it: any) => it.id !== a.id));
-                                                            setRemovingIds(prev => prev.filter(id => id !== a.id));
-                                                        }, 300);
-                                                    }}
-                                                >
-                                                    &times;
-                                                </button>
-                                            </li>
-                                        );
-                                    })}
+                                    {(() => {
+                                        const start = (currentPage - 1) * pageSize;
+                                        const visible = activities.slice(start, start + pageSize);
+                                        return visible.map((a: any) => {
+                                            const isRemoving = removingIds.includes(a.id);
+                                            return (
+                                                <li
+                                                    key={a.id}
+                                                    className={`flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transform transition-all duration-300 ${isRemoving ? 'opacity-0 translate-x-6' : 'opacity-100 translate-x-0'}`}>
+                                                    <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-semibold">📄</div>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{a.title}</div>
+                                                        <div className="text-sm text-gray-500">{new Date(a.date || a.created_at || '').toLocaleString()}</div>
+                                                    </div>
+                                                    <button
+                                                        aria-label="Remove"
+                                                        className="text-gray-400 hover:text-red-500 p-1 rounded"
+                                                        onClick={() => {
+                                                            setRemovingIds(prev => [...prev, a.id]);
+                                                            setTimeout(() => {
+                                                                setActivities(prev => prev.filter((it: any) => it.id !== a.id));
+                                                                setRemovingIds(prev => prev.filter(id => id !== a.id));
+                                                            }, 300);
+                                                        }}
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                </li>
+                                            );
+                                        });
+                                    })()}
                                 </ul>
+
+                                {/* Pagination controls */}
+                                <div className="flex items-center justify-between mt-4">
+                                    <div className="text-sm text-gray-500">Showing {(Math.min(activities.length, currentPage * pageSize) - (currentPage - 1) * pageSize)} of {activities.length}</div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            className={`px-3 py-1 rounded border ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                            disabled={currentPage === 1}
+                                        >Prev</button>
+                                        <div className="text-sm text-gray-600">{currentPage} / {Math.max(1, Math.ceil(activities.length / pageSize))}</div>
+                                        <button
+                                            className={`px-3 py-1 rounded border ${currentPage >= Math.ceil(activities.length / pageSize) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                            onClick={() => setCurrentPage(p => Math.min(Math.ceil(activities.length / pageSize), p + 1))}
+                                            disabled={currentPage >= Math.ceil(activities.length / pageSize)}
+                                        >Next</button>
+                                    </div>
+                                </div>
+                                </>
                             )}
                 </div>
 

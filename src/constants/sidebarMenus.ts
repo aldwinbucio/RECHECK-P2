@@ -1,4 +1,4 @@
-// src/constants/sidebarMenus.ts
+
 
 import { LayoutDashboard, BookCopy, User, PencilRuler, Megaphone, MessageCircle, Settings } from "lucide-react";
 
@@ -27,14 +27,14 @@ export const sidebarMenus = {
   { title: "Deviation Reports", url: "/rdevi1", icon: PencilRuler },
     {
       title: "Message",
-  // shared messages page
+  
   url: "/smessages",
       icon: MessageCircle,
     },
   { title: "Announcements", url: "/announcements", icon: Megaphone },
     {
       title: "Settings",
-  // settings page not implemented separately; keep placeholder
+  
   url: "/researcher/settings",
       icon: Settings,
     },
@@ -47,7 +47,7 @@ export const sidebarMenus = {
     },
     {
       title: "Assigned Reviews",
-  // App currently registers assigned reviews at /reviewerreviews
+  
   url: "/reviewerreviews",
       icon: BookCopy,
     },

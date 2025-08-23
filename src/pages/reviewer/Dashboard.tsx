@@ -18,6 +18,7 @@ import {
   getAssignedReviews,
 } from '../../services/reviewer';
 import useAuth from '../../hooks/useAuth.ts';
+import { supabase } from '@/lib/supabase';
 
 export default function ReviewerDashboard() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -25,6 +26,7 @@ export default function ReviewerDashboard() {
 
   const [reviewerStats, setReviewerStats] = useState<{ label: string; value: number }[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [removingIds, setRemovingIds] = useState<string[]>([]);
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,7 +40,7 @@ export default function ReviewerDashboard() {
     setLoading(true);
 
    
-    const assignedPromise = user ? getAssignedReviews(user.id) : Promise.resolve([]);
+  const assignedPromise = user ? getAssignedReviews(user.id) : Promise.resolve([]);
 
     Promise.all([
       getReviewerStats(),
@@ -46,14 +48,15 @@ export default function ReviewerDashboard() {
       getUpcomingDeadlines(),
       assignedPromise,
     ])
-      .then(([stats, activities, deadlines, assigned]) => {
+      .then(async ([stats, activities, deadlines, assigned]) => {
         if (!mounted) return;
 
         setReviewerStats(Array.isArray(stats) ? stats : []);
         setUpcomingDeadlines(Array.isArray(deadlines) ? deadlines : []);
 
-        // Map assigned reviews into notification-style activities
-        const assignedActivities = (Array.isArray(assigned) ? assigned : []).map((r: any) => ({
+       
+        const assignedActivities = (Array.isArray(assigned) ? assigned : []).map((r: any, i: number) => ({
+          id: `assign-${r?.id ?? i}`,
           type: 'assignment',
           title: `New Proposal Assigned: ${r?.proposal?.title || 'Untitled Proposal'}`,
           date: r?.date_assigned || r?.created_at || new Date().toISOString(),
@@ -61,13 +64,27 @@ export default function ReviewerDashboard() {
 
        
         const baseActivities = Array.isArray(activities) ? activities : [];
-        const merged = [...assignedActivities, ...baseActivities].sort((a: any, b: any) => {
+
+        
+        const { data: annData } = await supabase
+          .from('announcements')
+          .select('id, title, created_at')
+          .order('created_at', { ascending: false })
+          .limit(6);
+        const annActivities = (annData || []).map((a: any, i: number) => ({
+          id: `anno-${a.id ?? i}`,
+          type: 'announcement',
+          title: `Announcement: ${a.title}`,
+          date: a.created_at,
+        }));
+
+        const merged = [...assignedActivities, ...annActivities, ...baseActivities].sort((a: any, b: any) => {
           const da = new Date(a?.date || 0).getTime();
           const db = new Date(b?.date || 0).getTime();
           return db - da;
         });
 
-        setRecentActivities(merged);
+  setRecentActivities(merged);
       })
       .catch((err) => {
         console.error('ReviewerDashboard load error:', err);
@@ -206,28 +223,43 @@ export default function ReviewerDashboard() {
       <div className="mb-8">
         <div className="text-lg font-semibold text-gray-700 mb-2">Recent Activities</div>
         <div className="space-y-3 max-h-64 overflow-y-auto pr-2 scroll-smooth scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-blue-50 rounded-lg">
-          {(recentActivities || []).map((activity: any, idx: number) => (
-            <div
-              key={idx}
-              className="flex items-center gap-3 bg-gray-100 rounded-lg px-4 py-3 shadow-sm"
-            >
-              <span
-                className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  activity.type === 'assignment'
-                    ? 'bg-blue-200 text-blue-700'
-                    : 'bg-green-200 text-green-700'
-                }`}
-              >
-                {activity.type === 'assignment' ? '📄' : '✔️'}
-              </span>
-              <div>
-                <div className="font-medium text-gray-800 text-sm">{activity.title}</div>
-                <div className="text-xs text-gray-500">
-                  {new Date(activity.date).toLocaleString()}
+          {(recentActivities || []).map((activity: any, idx: number) => {
+            const isRemoving = removingIds.includes(activity.id || String(idx));
+            return (
+              <div
+                key={activity.id || idx}
+                className={`flex items-center gap-3 bg-gray-100 rounded-lg px-4 py-3 shadow-sm transform transition-all duration-300 ${isRemoving ? 'opacity-0 translate-x-6' : 'opacity-100 translate-x-0'}`}>
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    activity.type === 'assignment'
+                      ? 'bg-blue-200 text-blue-700'
+                      : activity.type === 'announcement'
+                      ? 'bg-yellow-200 text-yellow-700'
+                      : 'bg-green-200 text-green-700'
+                  }`}
+                >
+                  {activity.type === 'assignment' ? '📄' : activity.type === 'announcement' ? '📣' : '✔️'}
+                </span>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-800 text-sm">{activity.title}</div>
+                  <div className="text-xs text-gray-500">{new Date(activity.date).toLocaleString()}</div>
                 </div>
+                <button
+                  aria-label="Remove"
+                  className="text-gray-400 hover:text-red-500 p-1 rounded"
+                  onClick={() => {
+                    const id = activity.id || String(idx);
+                    setRemovingIds(prev => [...prev, id]);
+                    setTimeout(() => {
+                      setRecentActivities(prev => prev.filter((it: any) => (it.id || '') !== id));
+                      setRemovingIds(prev => prev.filter(i => i !== id));
+                    }, 300);
+                  }}>
+                  &times;
+                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {(!recentActivities || recentActivities.length === 0) && (
             <div className="text-sm text-gray-500">No recent activities.</div>
           )}

@@ -26,7 +26,7 @@ const RDashboard = () => {
             setNotifications((prev) => prev.filter((n) => n.id !== id));
             setReviewedNotifs((prev) => prev.filter((n) => n.id !== id));
             setRemovingIds((prev) => prev.filter((remId) => remId !== id));
-        }, 350); 
+        }, 300); 
     };
 
     const { user } = useAuth();
