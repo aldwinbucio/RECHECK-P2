@@ -3,7 +3,7 @@ import { Phone, X, Paperclip } from 'lucide-react';
 import type { Conversation, Message } from '../types/message';
 import { fetchConversations, fetchMessages, sendMessage } from '../services/messageService';
 
-// dummy data for initial conversations and messages
+
 const dummyConversations: Conversation[] = [
   {
     id: 1,
