@@ -2,23 +2,26 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import useAuth from '@/hooks/useAuth';
 import { getActivities, getUpcomingDeadlines } from '@/services/reviewer';
+import { FileText, Clock, CheckCircle2 } from 'lucide-react';
 
-type StatCard = { label: string; value: number; color?: string };
+type StatCard = { label: string; value: number; icon: React.ElementType; colorClasses: string };
 
-const Stat = ({ label, value, color = 'bg-indigo-600' }: StatCard) => (
-    <div className="flex-1 p-6 rounded-2xl shadow-md bg-white">
+const Stat = ({ label, value, icon: Icon, colorClasses }: StatCard) => (
+    <div className="flex-1 p-6 rounded-2xl shadow-md bg-white relative overflow-hidden">
         <div className="flex items-center justify-between">
             <div>
-                <div className="text-sm text-gray-500">{label}</div>
-                <div className="text-3xl font-bold text-gray-900 mt-2">{value}</div>
+                <div className="text-sm text-gray-500 font-medium tracking-wide">{label}</div>
+                <div className="text-3xl font-semibold text-gray-900 mt-2 tabular-nums">{value}</div>
             </div>
-            <div className={`h-12 w-12 rounded-lg ${color} flex items-center justify-center text-white`}> </div>
+            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${colorClasses}`}>
+                <Icon className="h-6 w-6" />
+            </div>
         </div>
     </div>
 );
 
 const SDashboard: React.FC = () => {
-    const [totalApplications, setTotalApplications] = useState(0);
+    const [totalApplications, setTotalApplications] = useState(0);  
     const [pendingCount, setPendingCount] = useState(0);
     const [approvedCount, setApprovedCount] = useState(0);
     const [activities, setActivities] = useState<any[]>([]);
@@ -124,9 +127,9 @@ const SDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Stat label="Total Applications" value={totalApplications} color="bg-blue-600" />
-                <Stat label="Applications Pending Review" value={pendingCount} color="bg-yellow-500" />
-                <Stat label="Studies Approved" value={approvedCount} color="bg-green-600" />
+                <Stat label="Total Applications" value={totalApplications} icon={FileText} colorClasses="bg-blue-50 text-blue-600 ring-1 ring-blue-200" />
+                <Stat label="Applications Pending Review" value={pendingCount} icon={Clock} colorClasses="bg-yellow-50 text-yellow-600 ring-1 ring-yellow-200" />
+                <Stat label="Studies Approved" value={approvedCount} icon={CheckCircle2} colorClasses="bg-green-50 text-green-600 ring-1 ring-green-200" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

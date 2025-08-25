@@ -14,6 +14,7 @@ const DeviationDetail = () => {
   const [notifMsg, setNotifMsg] = React.useState('👍');
   const [notifIcon, setNotifIcon] = React.useState('👍');
   const [reviewText, setReviewText] = React.useState('');
+  const isReviewed = deviation && deviation.severity && deviation.severity !== '';
   // const [correctiveText, setCorrectiveText] = React.useState('');
 
   React.useEffect(() => {
@@ -72,7 +73,14 @@ const DeviationDetail = () => {
          {deviation.protocol_title || deviation.title}
           </h2>
             </div>
-          <div className="text-gray-500 text-lg mb-6">Deviation Details</div>
+          <div className="text-gray-500 text-lg mb-6 flex items-center justify-between">
+            <span>Deviation Details</span>
+            {isReviewed && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-green-50 text-green-700 px-4 py-1 text-sm font-medium border border-green-200">
+                Reviewed
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 mb-6">
             <div><span className="font-bold text-gray-700">Protocol Code:</span> {deviation.protocol_code || '-'}</div>
             <div><span className="font-bold text-gray-700">Deviation Date:</span> {deviation.deviation_date || '-'}</div>
@@ -123,8 +131,11 @@ const DeviationDetail = () => {
             </div>
           </div>
           <div className="mb-8">
-            <div className="font-semibold text-gray-700 mb-2">Assess Severity</div>
-            <div className="flex gap-8 items-center">
+            <div className="font-semibold text-gray-700 mb-2 flex items-center justify-between">
+              <span>Assess Severity</span>
+              {isReviewed && <span className="text-xs text-gray-500 font-medium">Editing disabled</span>}
+            </div>
+            <div className={`flex gap-8 items-center ${isReviewed ? 'opacity-60 pointer-events-none select-none' : ''}`}> 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
@@ -132,6 +143,7 @@ const DeviationDetail = () => {
                   value="Minor"
                   checked={severity === 'Minor'}
                   onChange={() => setSeverity('Minor')}
+                  disabled={isReviewed}
                   className="accent-blue-600"
                 />
                 <span className="text-base">Minor</span>
@@ -143,6 +155,7 @@ const DeviationDetail = () => {
                   value="Major"
                   checked={severity === 'Major'}
                   onChange={() => setSeverity('Major')}
+                  disabled={isReviewed}
                   className="accent-red-900"
                 />
                 <span className="text-base">Major</span>
@@ -151,59 +164,79 @@ const DeviationDetail = () => {
           </div>
           <div className="flex flex-col md:flex-row gap-8 mt-8">
             {severity === 'Minor' && (
-              <div className="flex-1 border border-blue-200 rounded-xl p-6 min-h-[120px] bg-blue-50 flex flex-col">
-                <div className="font-semibold mb-2 text-[18px] text-blue-900">Deviation Review</div>
+              <div className={`flex-1 border border-blue-200 rounded-xl p-6 min-h-[120px] bg-blue-50 flex flex-col ${isReviewed ? 'opacity-60' : ''}`}>
+                <div className="font-semibold mb-2 text-[18px] text-blue-900 flex items-center justify-between">
+                  <span>Deviation Review</span>
+                  {isReviewed && <span className="text-xs text-blue-700/70">Locked</span>}
+                </div>
                 <textarea
-                  className="mb-4 text-gray-700 text-base flex-1 whitespace-pre-line bg-white border border-gray-300 rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="mb-4 text-gray-700 text-base flex-1 whitespace-pre-line bg-white border border-gray-300 rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100"
                   rows={4}
                   value={reviewText}
                   onChange={e => setReviewText(e.target.value)}
                   placeholder="Enter deviation review..."
+                  disabled={isReviewed}
                 />
-                <button
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-fit mt-auto"
-                  onClick={async () => {
-                    setLoading(true);
-                    const { error } = await supabase
-                      .from('deviation_reports')
-                      .update({ review: reviewText, severity: 'Minor' })
-                      .eq('id', deviation.id);
-                    setLoading(false);
-                    if (!error) {
-                      showNotification('Deviation review has been saved and sent to the Researcher', '👍');
-                    } else {
-                      showNotification('Failed to save review. Please try again.', '❌');
-                    }
-                  }}
-                >
-                  Approve
-                </button>
+                {!isReviewed && (
+                  <button
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-fit mt-auto"
+                    onClick={async () => {
+                      setLoading(true);
+                      const { error } = await supabase
+                        .from('deviation_reports')
+                        .update({ review: reviewText, severity: 'Minor' })
+                        .eq('id', deviation.id);
+                      setLoading(false);
+                      if (!error) {
+                        showNotification('Deviation review has been saved and sent to the Researcher', '👍');
+                      } else {
+                        showNotification('Failed to save review. Please try again.', '❌');
+                      }
+                    }}
+                  >
+                    Approve
+                  </button>
+                )}
               </div>
             )}
             {severity === 'Major' && (
-              <div className="flex-1 border border-red-200 rounded-xl p-6 min-h-[120px] bg-red-50 flex flex-col">
-                <div className="font-semibold mb-2 text-[18px] text-red-900">Require Corrective Action</div>
-                <button
-                  className="text-black font-semibold w-fit mt-auto"
-                  onClick={async () => {
-                    setLoading(true);
-                    const { error } = await supabase
-                      .from('deviation_reports')
-                      .update({ severity: 'Major' })
-                      .eq('id', deviation.id);
-                    setLoading(false);
-                    if (!error) {
-                      navigate('/staff/corrective-action-request', { state: { deviationId: deviation.id } });
-                    } else {
-                      showNotification('Failed to update severity. Please try again.', '❌');
-                    }
-                  }}
-                >
-                  Click Here &rarr;
-                </button>
+              <div className={`flex-1 border border-red-200 rounded-xl p-6 min-h-[120px] bg-red-50 flex flex-col ${isReviewed ? 'opacity-60' : ''}`}>
+                <div className="font-semibold mb-2 text-[18px] text-red-900 flex items-center justify-between">
+                  <span>Require Corrective Action</span>
+                  {isReviewed && <span className="text-xs text-red-700/70">Locked</span>}
+                </div>
+                {!isReviewed && (
+                  <button
+                    className="text-black font-semibold w-fit mt-auto"
+                    onClick={async () => {
+                      setLoading(true);
+                      const { error } = await supabase
+                        .from('deviation_reports')
+                        .update({ severity: 'Major' })
+                        .eq('id', deviation.id);
+                      setLoading(false);
+                      if (!error) {
+                        navigate('/staff/corrective-action-request', { state: { deviationId: deviation.id } });
+                      } else {
+                        showNotification('Failed to update severity. Please try again.', '❌');
+                      }
+                    }}
+                  >
+                    Click Here &rarr;
+                  </button>
+                )}
               </div>
             )}
           </div>
+          {isReviewed && (
+            <div className="mt-10 p-4 border border-green-200 bg-green-50 rounded-xl text-sm text-green-700 flex items-start gap-3">
+              <span className="text-lg">✔️</span>
+              <div>
+                <div className="font-semibold mb-1">This deviation has already been reviewed.</div>
+                <p className="text-green-700/80">Further edits are disabled to preserve the integrity of the recorded assessment.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
