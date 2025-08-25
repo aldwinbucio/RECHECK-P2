@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -40,21 +40,46 @@ const SDeviations = () => {
   const [typeOptions, setTypeOptions] = useState<string[]>(['All']);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function fetchDeviations() {
-      const { data, error } = await supabase.from('deviation_reports').select('*').order('created_at', { ascending: false });
-      if (error) {
-        setDeviations([]);
-        setTypeOptions(['All']);
-      } else {
-        setDeviations(data.map(mapDeviation));
-      
-        const uniqueTypes = Array.from(new Set(data.map((row: any) => row.type).filter((t: string) => t && t !== '')));
-        setTypeOptions(['All', ...uniqueTypes]);
-      }
-      setLoading(false);
+  const fetchDeviations = useCallback(async () => {
+    const { data, error } = await supabase.from('deviation_reports').select('*').order('created_at', { ascending: false });
+    if (error) {
+      setDeviations([]);
+      setTypeOptions(['All']);
+    } else {
+      setDeviations(data.map(mapDeviation));
+      const uniqueTypes = Array.from(new Set(data.map((row: any) => row.type).filter((t: string) => t && t !== '')));
+      setTypeOptions(['All', ...uniqueTypes]);
     }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
     fetchDeviations();
+  }, [fetchDeviations]);
+
+  // Refetch when window regains focus (user returns from detail page)
+  useEffect(() => {
+    const onFocus = () => fetchDeviations();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchDeviations]);
+
+  // Real-time subscription to update severity/status instantly
+  useEffect(() => {
+    const channel = supabase
+      .channel('deviation_reports_updates')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'deviation_reports' }, (payload: any) => {
+        setDeviations(prev => {
+          const idx = prev.findIndex(d => d.id === payload.new.id);
+            if (idx === -1) return prev; // not in current page yet
+            const updatedRow = mapDeviation(payload.new);
+            const next = [...prev];
+            next[idx] = updatedRow;
+            return next;
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
 

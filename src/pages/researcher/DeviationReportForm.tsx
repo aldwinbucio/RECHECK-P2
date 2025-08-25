@@ -22,7 +22,6 @@ type InvestigatorState = {
   correctiveAction: string;
   rationale: string;
   impact: string;
-  reportedBy?: string;
   reportSubmissionDate: string;
   type: string;
 };
@@ -35,7 +34,6 @@ const initialInvestigator: InvestigatorState = {
   correctiveAction: '',
   rationale: '',
   impact: '',
-  reportedBy: undefined,
   reportSubmissionDate: '',
   type: ''
 };
@@ -50,9 +48,7 @@ const DeviationReportForm: React.FC = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user?.email) {
-      setInvestigator(prev => ({ ...prev, reportedBy: user.email! }));
-    }
+  // user id/email captured server-side; no need to store locally for submit
   }, [user]);
 
   const validate = () => {
@@ -64,7 +60,6 @@ const DeviationReportForm: React.FC = () => {
     if (!investigator.rationale) newErrors.rationale = 'Required';
     if (!investigator.impact) newErrors.impact = 'Required';
     if (!investigator.correctiveAction) newErrors.correctiveAction = 'Required';
-    if (!investigator.reportedBy) newErrors.reportedBy = 'Required';
     if (!investigator.reportSubmissionDate) newErrors.reportSubmissionDate = 'Required';
     if (!investigator.type) newErrors.type = 'Required';
     setErrors(newErrors);
@@ -92,7 +87,7 @@ const DeviationReportForm: React.FC = () => {
   uploadedUrls.push(pub.publicUrl);
       }
 
-      const { error } = await submitDeviationReport({
+  const { error } = await submitDeviationReport({
         protocolTitle: investigator.protocolTitle,
         protocolCode: investigator.protocolCode,
         deviationDate: investigator.deviationDate,
@@ -101,7 +96,6 @@ const DeviationReportForm: React.FC = () => {
         impact: investigator.impact,
         correctiveAction: investigator.correctiveAction,
         supportingDocuments: uploadedUrls,
-        reportedBy: investigator.reportedBy,
         reportSubmissionDate: investigator.reportSubmissionDate,
         type: investigator.type,
       });
@@ -298,21 +292,7 @@ const DeviationReportForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="flex items-center justify-between text-sm font-medium text-gray-700 mb-1">Submitted By</label>
-              <input
-                className="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-700"
-                name="reportedBy"
-                value={investigator.reportedBy}
-                readOnly
-                placeholder="user@example.com"
-              />
-            </div>
-            <div className="flex items-end">
-              <p className="text-xs text-gray-500 leading-snug">Your account email is auto-captured for traceability and cannot be edited.</p>
-            </div>
-          </div>
+          {/* Submitted By field removed; ownership captured via auth uid server-side */}
         </section>
 
         <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-10" />
