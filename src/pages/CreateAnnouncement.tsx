@@ -1,175 +1,222 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import useAuth from '@/hooks/useAuth';
+import { Megaphone, Paperclip, Users, ShieldCheck, Globe2, X, Loader2 } from 'lucide-react';
+
+type Audience = 'students' | 'committee' | 'all';
 
 export default function CreateAnnouncement() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [audience, setAudience] = useState<'students' | 'committee' | 'all' | null>(null);
+  const [audience, setAudience] = useState<Audience | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { user } = useAuth();
 
-  const handleAttachment = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setAttachments(Array.from(e.target.files));
-    }
+  const reset = () => {
+    setTitle('');
+    setDescription('');
+    setAudience(null);
+    setAttachments([]);
+    setErrors({});
+    setMessage(null);
+  };
+
+  const validate = () => {
+    const e: Record<string,string> = {};
+    if (!title.trim()) e.title = 'Title required';
+    if (!description.trim()) e.description = 'Description required';
+    if (!audience) e.audience = 'Select audience';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleFiles = (filesList: FileList | null) => {
+    if (!filesList) return;
+    setAttachments(prev => [...prev, ...Array.from(filesList)]);
+  };
+
+  const removeFile = (idx: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleAnnounce = async () => {
     setMessage(null);
-    if (!title.trim()) return setMessage('Title is required');
-    if (!audience) return setMessage('Please select an audience');
+    if (!validate()) return;
     setLoading(true);
     try {
-      // upload attachments to storage bucket 'announcements' (create this bucket in Supabase)
       const urls: string[] = [];
       for (const file of attachments) {
         const key = `announcements/${Date.now()}-${file.name}`;
         const { error: upErr } = await supabase.storage.from('announcements').upload(key, file, { upsert: true });
-        if (upErr) {
-          console.error('upload error', upErr);
-          setMessage('Failed to upload attachments');
-          setLoading(false);
-          return;
-        }
+        if (upErr) throw upErr;
         const { data } = supabase.storage.from('announcements').getPublicUrl(key);
         urls.push(data.publicUrl);
       }
 
-      // insert announcement row
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
-        audience: audience,
+        audience,
         attachments: urls,
         created_by: (user as any)?.id || null,
         created_by_email: (user as any)?.email || null,
       };
 
       const { error: insertErr } = await supabase.from('announcements').insert(payload);
-      if (insertErr) {
-        console.error('insert error', insertErr);
-        setMessage('Failed to save announcement');
-        setLoading(false);
-        return;
-      }
+      if (insertErr) throw insertErr;
 
-      setTitle('');
-      setDescription('');
-      setAudience(null);
-      setAttachments([]);
+      reset();
       setMessage('Announcement published');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setMessage('Unexpected error');
+      setMessage('Publish failed');
     } finally {
       setLoading(false);
     }
   };
 
+  const audienceButtons: { key: Audience; label: string; icon: React.ReactNode }[] = [
+    { key: 'students', label: 'Students', icon: <Users className="h-4 w-4" /> },
+    { key: 'committee', label: 'Committee', icon: <ShieldCheck className="h-4 w-4" /> },
+    { key: 'all', label: 'All', icon: <Globe2 className="h-4 w-4" /> },
+  ];
+
   return (
-    <div className="max-w-3xl mx-auto p-8 bg-white rounded-2xl shadow-xl border border-gray-100">
-      <h1 className="text-3xl font-bold mb-8 text-black text-center tracking-tight">Create Announcement</h1>
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Title</label>
-          <input
-            type="text"
-            placeholder="Enter announcement title"
-            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition text-gray-800"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-          <textarea
-            placeholder="Enter announcement description"
-            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition text-gray-800 min-h-[80px]"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Attachments</label>
-          <div className="flex gap-3 items-center">
-            <label className="border border-dashed border-blue-300 rounded-lg px-4 py-2 text-blue-700 cursor-pointer hover:bg-blue-50 transition flex items-center">
-              <span className="mr-2 text-lg">📎</span> Add Attachments
-              <input
-                type="file"
-                multiple
-                className="hidden"
-                onChange={handleAttachment}
-              />
-            </label>
-            {attachments.length > 0 && (
-              <span className="text-xs text-gray-500">{attachments.length} file(s) selected</span>
-            )}
+    <div className="max-w-4xl mx-auto p-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-8 py-6 flex items-center gap-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-white to-blue-50">
+          <div className="h-12 w-12 rounded-xl bg-blue-600/10 text-blue-700 flex items-center justify-center">
+            <Megaphone className="h-6 w-6" />
           </div>
-          {attachments.length > 0 && (
-            <ul className="mt-2 text-sm text-gray-700 border rounded-lg bg-gray-50 p-3">
-              {attachments.map((file, idx) => (
-                <li key={idx} className="flex items-center justify-between py-1">
-                  <span className="truncate max-w-xs">{file.name}</span>
-                  <span className="ml-2 text-gray-400 text-xs">{(file.size / 1024).toFixed(1)} KB</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Audience</label>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className={`border rounded-lg px-5 py-2 font-medium transition ${audience === 'students' ? 'bg-blue-700 text-white border-blue-700' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-blue-50'}`}
-              onClick={() => setAudience('students')}
-            >
-              All Students
-            </button>
-            <button
-              type="button"
-              className={`border rounded-lg px-5 py-2 font-medium transition ${audience === 'committee' ? 'bg-blue-700 text-white border-blue-700' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-blue-50'}`}
-              onClick={() => setAudience('committee')}
-            >
-              Committee
-            </button>
-            <button
-              type="button"
-              className={`border rounded-lg px-5 py-2 font-medium transition ${audience === 'all' ? 'bg-blue-700 text-white border-blue-700' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-blue-50'}`}
-              onClick={() => setAudience('all')}
-            >
-              All
-            </button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Create Announcement</h1>
+            <p className="text-sm text-gray-500 mt-1">Share important updates with the selected audience.</p>
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Preview</label>
-          <div className="rounded-2xl border-2 border-dashed border-blue-200 min-h-[120px] flex items-end bg-gradient-to-br from-blue-50 via-white to-blue-100">
-            <div className="p-6 m-4 max-w-md w-full">
-              <div className="font-bold text-xl mb-1 text-blue-900">{title || 'Announcement Title'}</div>
-              <div className="text-base text-gray-700 whitespace-pre-line">{description || 'Announcement description will appear here.'}</div>
-              <div className="mt-2 text-xs text-blue-700">
-                {audience ? `Audience: ${audience === 'students' ? 'All Students' : audience === 'committee' ? 'Committee' : 'All'}` : 'Select audience'}
-              </div>
-              {attachments.length > 0 && (
-                <div className="mt-2 text-xs text-blue-500">
-                  Attachments: {attachments.map(f => f.name).join(', ')}
+
+        <div className="px-8 py-8 space-y-10">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div>
+                <label className="flex items-center justify-between text-sm font-medium text-gray-700 mb-1">Title <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  className={`w-full rounded-lg border ${errors.title ? 'border-red-400' : 'border-gray-300'} bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100`}
+                  value={title}
+                  maxLength={140}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Concise headline"
+                />
+                <div className="mt-1 flex justify-between text-xs text-gray-400">
+                  <span className="text-red-500">{errors.title}</span>
+                  <span>{title.length}/140</span>
                 </div>
-              )}
+              </div>
+              <div>
+                <label className="flex items-center justify-between text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+                <textarea
+                  className={`w-full rounded-lg border ${errors.description ? 'border-red-400' : 'border-gray-300'} bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 min-h-[140px] resize-y`}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Provide the full announcement details."
+                />
+                <span className="mt-1 text-xs text-red-500 inline-block">{errors.description}</span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Audience <span className="text-red-500">*</span></label>
+                <div className="inline-flex rounded-lg border border-gray-300 bg-gray-50 overflow-hidden divide-x divide-gray-300" role="radiogroup" aria-label="Audience selector">
+                  {audienceButtons.map(btn => {
+                    const active = audience === btn.key;
+                    return (
+                      <button
+                        key={btn.key}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setAudience(btn.key)}
+                        className={`px-4 py-2 flex items-center gap-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${active ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white'}`}
+                      >
+                        {btn.icon}
+                        {btn.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="mt-1 text-xs text-red-500 block">{errors.audience}</span>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Attachments</label>
+                <div
+                  className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center hover:border-blue-400 hover:bg-blue-50 transition cursor-pointer"
+                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+                  onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
+                  onClick={() => document.getElementById('announcement-files')?.click()}
+                >
+                  <Paperclip className="h-6 w-6 mx-auto text-blue-500 mb-2" />
+                  <p className="text-xs text-gray-600">Drag & drop or click to browse</p>
+                  <input id="announcement-files" type="file" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
+                </div>
+                {attachments.length > 0 && (
+                  <ul className="mt-3 bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-auto text-sm">
+                    {attachments.map((f,i) => (
+                      <li key={i} className="flex items-center gap-3 px-3 py-2">
+                        <span className="flex-1 truncate">{f.name}</span>
+                        <span className="text-xs text-gray-400">{(f.size/1024).toFixed(1)} KB</span>
+                        <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-red-500 p-1"><X className="h-4 w-4" /></button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            <div className="bg-slate-50/60 rounded-xl border border-slate-200 p-6 flex flex-col">
+              <h2 className="text-sm font-semibold text-slate-600 mb-3 tracking-wide">Live Preview</h2>
+              <div className="flex-1 rounded-lg border border-slate-200 bg-white p-5 shadow-sm relative">
+                <div className="absolute right-3 top-3 text-[10px] uppercase tracking-wider font-medium text-slate-400">Preview</div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2 break-words">{title || 'Announcement Title'}</h3>
+                <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed min-h-[80px]">{description || 'Announcement description will appear here. Provide details to inform your audience.'}</p>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-100">
+                    <Megaphone className="h-3.5 w-3.5" />
+                    {audience ? (audience === 'students' ? 'Students' : audience === 'committee' ? 'Committee' : 'All Users') : 'Audience not set'}
+                  </span>
+                  {attachments.length > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      <Paperclip className="h-3.5 w-3.5" /> {attachments.length} file(s)
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+
+          {message && (
+            <div className={`text-sm px-4 py-3 rounded-lg border ${message.includes('failed') || message.toLowerCase().includes('error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>{message}</div>
+          )}
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={reset}
+              className="px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={handleAnnounce}
+              disabled={loading}
+              className="px-6 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? 'Publishing…' : 'Publish Announcement'}
+            </button>
+          </div>
         </div>
-        <div className="flex justify-end gap-4 mt-8">
-          <button className="text-gray-500 hover:underline font-medium" type="button" onClick={() => { setTitle(''); setDescription(''); setAudience(null); setAttachments([]); }}>Cancel</button>
-          <button className="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200" type="button" onClick={handleAnnounce} disabled={loading}>
-            {loading ? 'Publishing...' : 'Announce'}
-          </button>
-        </div>
-        {message && <div className="text-sm text-center text-gray-700 mt-2">{message}</div>}
       </div>
     </div>
   );

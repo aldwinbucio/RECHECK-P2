@@ -188,6 +188,9 @@ const DeviationDetail = () => {
                         .eq('id', deviation.id);
                       setLoading(false);
                       if (!error) {
+                        // Mark as reviewed locally to lock UI without refetch
+                        setDeviation((prev: any) => prev ? { ...prev, severity: 'Minor', review: reviewText } : prev);
+                        setSeverity('Minor');
                         showNotification('Deviation review has been saved and sent to the Researcher', '👍');
                       } else {
                         showNotification('Failed to save review. Please try again.', '❌');
@@ -216,6 +219,8 @@ const DeviationDetail = () => {
                         .eq('id', deviation.id);
                       setLoading(false);
                       if (!error) {
+                        setDeviation((prev: any) => prev ? { ...prev, severity: 'Major' } : prev);
+                        setSeverity('Major');
                         navigate('/staff/corrective-action-request', { state: { deviationId: deviation.id } });
                       } else {
                         showNotification('Failed to update severity. Please try again.', '❌');

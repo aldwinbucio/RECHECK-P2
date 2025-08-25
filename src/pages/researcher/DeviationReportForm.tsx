@@ -83,10 +83,13 @@ const DeviationReportForm: React.FC = () => {
     try {
       const uploadedUrls: string[] = [];
       for (const file of files) {
-        const { data, error } = await supabase.storage.from('deviation-uploads').upload(`reports/${Date.now()}-${file.name}`, file);
-        if (error) throw error;
-        const publicUrlResp = supabase.storage.from('deviation-uploads').getPublicUrl(data.path);
-        uploadedUrls.push(publicUrlResp.data.publicUrl);
+        // Upload to new 'storage' bucket
+        const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const path = `deviation-reports/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
+  const uploadRes = await supabase.storage.from('storage').upload(path, file, { upsert: false });
+  if (uploadRes.error) throw uploadRes.error;
+  const { data: pub } = supabase.storage.from('storage').getPublicUrl(path);
+  uploadedUrls.push(pub.publicUrl);
       }
 
       const { error } = await submitDeviationReport({
