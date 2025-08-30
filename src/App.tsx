@@ -32,6 +32,7 @@ import RDashboard from './pages/researcher/Dashboard';
 import AssignedReviews from './pages/reviewer/AssignedReviews';
 import ReviewDetails from './pages/reviewer/ReviewDetails';
 import Announcements from './pages/Announcements';
+import RForms from './pages/researcher/Forms';
 
 
 function App() {
@@ -153,6 +154,11 @@ function App() {
             <Route path="/researcher/submissions" element={
               <ProtectedRoute allowedRoles={["Researcher"]}>
                 <RSubmissions />
+              </ProtectedRoute>
+            } />
+            <Route path="/researcher/forms" element={
+              <ProtectedRoute allowedRoles={["Researcher"]}>
+                <RForms />
               </ProtectedRoute>
             } />
             {/* Researcher deviation routes */}

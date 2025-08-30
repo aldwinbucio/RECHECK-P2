@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import useAuth from '@/hooks/useAuth';
 import { ClipboardList, CalendarDays, FileText, UploadCloud, AlertCircle } from 'lucide-react';
 
-// Deviation type select options
+
 const deviationTypeOptions = [
   'Informed Consent',
   'Adverse Events',
@@ -48,7 +48,7 @@ const DeviationReportForm: React.FC = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-  // user id/email captured server-side; no need to store locally for submit
+  
   }, [user]);
 
   const validate = () => {
