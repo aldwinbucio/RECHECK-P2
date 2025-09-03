@@ -20,4 +20,13 @@ export interface ResearcherDeviationReport {
   corrective_action_docs?: string;
   corrective_action_docs_details?: string;
   corrective_action_deadline?: string;
+  // Resolution fields
+  resolution_status?: 'pending' | 'in_progress' | 'resolved' | 'rejected';
+  researcher_response?: string;
+  resolution_actions_taken?: string;
+  resolution_supporting_documents?: string[];
+  resolution_submission_date?: string;
+  resolution_notes?: string;
+  staff_acknowledgment?: string;
+  staff_acknowledgment_date?: string;
 }

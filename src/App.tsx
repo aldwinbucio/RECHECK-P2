@@ -33,6 +33,8 @@ import AssignedReviews from './pages/reviewer/AssignedReviews';
 import ReviewDetails from './pages/reviewer/ReviewDetails';
 import Announcements from './pages/Announcements';
 import RForms from './pages/researcher/Forms';
+import ResolutionReviews from './pages/staff/ResolutionReviews';
+import ResolutionDetail from './pages/staff/ResolutionDetail';
 
 
 function App() {
@@ -122,6 +124,16 @@ function App() {
             <Route path="/staff/corrective-action-request" element={
               <ProtectedRoute allowedRoles={["Staff"]}>
                 <CorrectiveActionRequest />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/resolution-reviews" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <ResolutionReviews />
+              </ProtectedRoute>
+            } />
+            <Route path="/staff/resolution-detail/:id" element={
+              <ProtectedRoute allowedRoles={["Staff"]}>
+                <ResolutionDetail />
               </ProtectedRoute>
             } />
             {/* Reviewer routes */}

@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, BookCopy, User, PencilRuler, Megaphone, FileText } from "lucide-react";
+import { LayoutDashboard, BookCopy, User, PencilRuler, Megaphone, FileText, CheckCircle } from "lucide-react";
 
 export const sidebarMenus = {
   Staff: [
@@ -8,6 +8,7 @@ export const sidebarMenus = {
   { title: "Assign Reviewer", url: "/sassign-reviewer", icon: User },
   { title: "Review Submission", url: "/sreview-submission", icon: BookCopy },
   { title: "Deviation Management", url: "/sdevi", icon: PencilRuler },
+  { title: "Resolution Reviews", url: "/staff/resolution-reviews", icon: CheckCircle },
   { title: "Create Announcement", url: "/screate-announcement", icon: Megaphone },
   { title: "Announcements", url: "/announcements", icon: Megaphone },
   ],

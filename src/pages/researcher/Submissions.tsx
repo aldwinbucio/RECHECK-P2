@@ -31,8 +31,7 @@ const RSubmissions = () => {
                     return;
                 }
 
-                // Some existing reports may have 'reported_by' stored as a name instead of email.
-                // Build a list of candidate reporter identifiers to match: email, possible full name and local-part.
+               
                 const candidates: string[] = [email];
                 const metaAny: any = (user as any)?.user_metadata;
                 if (metaAny) {
@@ -55,7 +54,7 @@ const RSubmissions = () => {
                     console.debug('Initial fetch result count:', (data || []).length, 'candidates:', candidates);
                     let rows = data || [];
 
-                    // If primary .in() query returned no rows, try a broader client-side filter as fallback
+                   
                     if ((!rows || rows.length === 0)) {
                         console.debug('No rows found with .in(); fetching all reports as fallback');
                         const { data: allData, error: allErr } = await supabase.from('deviation_reports').select('*').order('report_submission_date', { ascending: false });
@@ -84,7 +83,7 @@ const RSubmissions = () => {
         fetch();
     }, [user]);
 
-    // Filtered and paginated data
+   
     const statusOptions = ['All', 'Pending / View', 'Reviewed'];
     const filtered = submissions.filter(sub => {
         const matchesSearch = sub.protocol_title.toLowerCase().includes(search.toLowerCase());
@@ -105,6 +104,32 @@ const RSubmissions = () => {
             return sub.corrective_action_feedback && sub.corrective_action_feedback.trim() !== '';
         }
         return sub.review && sub.review.trim() !== '';
+    };
+
+    // Helper to get resolution status display
+    const getResolutionStatusDisplay = (sub: any) => {
+        if (!sub.resolution_status) return null;
+        
+        const statusMap: { [key: string]: { text: string; color: string } } = {
+            'pending': { text: 'Pending', color: 'text-gray-600 bg-gray-100 border-gray-300' },
+            'in_progress': { text: 'In Progress', color: 'text-yellow-700 bg-yellow-100 border-yellow-300' },
+            'resolved': { text: 'Resolved', color: 'text-green-700 bg-green-100 border-green-300' },
+            'rejected': { text: 'Rejected', color: 'text-red-700 bg-red-100 border-red-300' }
+        };
+        
+        return statusMap[sub.resolution_status] || statusMap['pending'];
+    };
+
+    // Helper to determine action needed
+    const getActionNeeded = (sub: any) => {
+        if (!sub.severity || sub.severity === '') return null;
+        
+        if (sub.resolution_status === 'resolved') return 'Completed';
+        if (sub.resolution_status === 'in_progress') return 'Review Response';
+        if (hasFeedback(sub) && (!sub.resolution_status || sub.resolution_status === 'pending')) {
+            return 'Action Required';
+        }
+        return 'View Feedback';
     };
 
     return (
@@ -150,48 +175,71 @@ const RSubmissions = () => {
                             <th className="px-4 py-3 text-left font-medium">Type</th>
                             <th className="px-4 py-3 text-left font-medium">Severity</th>
                             <th className="px-4 py-3 text-left font-medium">Status</th>
-                            <th className="px-4 py-3 text-left font-medium">Feedback</th>
+                            <th className="px-4 py-3 text-left font-medium">Resolution</th>
+                            <th className="px-4 py-3 text-left font-medium">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={7} className="text-center text-gray-500 py-8">Loading submissions...</td></tr>
+                            <tr><td colSpan={8} className="text-center text-gray-500 py-8">Loading submissions...</td></tr>
                         ) : paginated.length === 0 ? (
-                            <tr><td colSpan={7} className="text-center text-gray-400 py-8">No submissions found.</td></tr>
+                            <tr><td colSpan={8} className="text-center text-gray-400 py-8">No submissions found.</td></tr>
                         ) : (
-                            paginated.map((sub) => (
-                                <tr key={sub.id} className="even:bg-gray-50">
-                                    <td className="px-4 py-3 font-medium text-blue-700 cursor-pointer hover:underline">{sub.protocol_title}</td>
-                                    <td className="px-4 py-3">{sub.reported_by}</td>
-                                    <td className="px-4 py-3 text-blue-700/80 font-medium">{new Date(sub.report_submission_date).toISOString().slice(0, 10)}</td>
-                                    <td className="px-4 py-3 font-semibold"><span className="bg-gray-100 px-2 py-1 rounded-md">{sub.type}</span></td>
-                                    <td className="px-4 py-3">
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-xs font-semibold bg-gray-100
-                                                ${sub.severity === 'Minor' ? 'border border-blue-500 text-blue-700' : ''}
-                                                ${sub.severity === 'Major' ? 'border border-red-500 text-red-700' : ''}
-                                            `}
-                                        >
-                                            {sub.severity || '-'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`px-5 py-2 rounded-lg font-semibold border transition text-sm focus:outline-none bg-white text-blue-700 border-blue-400 whitespace-nowrap`}>{sub.severity && sub.severity !== '' ? 'Reviewed' : 'Pending / View'}</span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        {sub.severity && sub.severity !== '' && hasFeedback(sub) ? (
-                                            <button
-                                                className="px-3 py-1 rounded bg-blue-100 text-blue-700 font-semibold hover:bg-blue-200 transition text-xs border border-blue-200"
-                                                onClick={() => navigate(`/researcher/feedback/${sub.id}`)}
+                            paginated.map((sub) => {
+                                const resolutionStatus = getResolutionStatusDisplay(sub);
+                                const actionNeeded = getActionNeeded(sub);
+                                
+                                return (
+                                    <tr key={sub.id} className="even:bg-gray-50">
+                                        <td className="px-4 py-3 font-medium text-blue-700 cursor-pointer hover:underline">{sub.protocol_title}</td>
+                                        <td className="px-4 py-3">{sub.reported_by}</td>
+                                        <td className="px-4 py-3 text-blue-700/80 font-medium">{new Date(sub.report_submission_date).toISOString().slice(0, 10)}</td>
+                                        <td className="px-4 py-3 font-semibold"><span className="bg-gray-100 px-2 py-1 rounded-md">{sub.type}</span></td>
+                                        <td className="px-4 py-3">
+                                            <span
+                                                className={`px-3 py-1 rounded-full text-xs font-semibold bg-gray-100
+                                                    ${sub.severity === 'Minor' ? 'border border-blue-500 text-blue-700' : ''}
+                                                    ${sub.severity === 'Major' ? 'border border-red-500 text-red-700' : ''}
+                                                `}
                                             >
-                                                View Feedback
-                                            </button>
-                                        ) : (
-                                            <span className="text-gray-400 text-xs">-</span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))
+                                                {sub.severity || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-5 py-2 rounded-lg font-semibold border transition text-sm focus:outline-none bg-white text-blue-700 border-blue-400 whitespace-nowrap`}>{sub.severity && sub.severity !== '' ? 'Reviewed' : 'Pending / View'}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {resolutionStatus ? (
+                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${resolutionStatus.color}`}>
+                                                    {resolutionStatus.text}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {sub.severity && sub.severity !== '' ? (
+                                                <button
+                                                    className={`px-3 py-1 rounded font-semibold transition text-xs border ${
+                                                        actionNeeded === 'Action Required' 
+                                                            ? 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200' 
+                                                            : actionNeeded === 'Review Response'
+                                                            ? 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-200'
+                                                            : actionNeeded === 'Completed'
+                                                            ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                                                            : 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200'
+                                                    }`}
+                                                    onClick={() => navigate(`/researcher/feedback/${sub.id}`)}
+                                                >
+                                                    {actionNeeded}
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs">-</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
