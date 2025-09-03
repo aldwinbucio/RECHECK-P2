@@ -1,6 +1,6 @@
 
 
-import { LayoutDashboard, BookCopy, User, PencilRuler, Megaphone, MessageCircle, Settings, FileText } from "lucide-react";
+import { LayoutDashboard, BookCopy, User, PencilRuler, Megaphone, FileText } from "lucide-react";
 
 export const sidebarMenus = {
   Staff: [
@@ -10,8 +10,6 @@ export const sidebarMenus = {
   { title: "Deviation Management", url: "/sdevi", icon: PencilRuler },
   { title: "Create Announcement", url: "/screate-announcement", icon: Megaphone },
   { title: "Announcements", url: "/announcements", icon: Megaphone },
-  { title: "Message", url: "/smessages", icon: MessageCircle },
-  { title: "Settings", url: "/staff/settings", icon: Settings },
   ],
   Researcher: [
     {
@@ -30,19 +28,7 @@ export const sidebarMenus = {
       icon: FileText,
     },
   { title: "Deviation Reports", url: "/rdevi1", icon: PencilRuler },
-    {
-      title: "Message",
-  
-  url: "/smessages",
-      icon: MessageCircle,
-    },
   { title: "Announcements", url: "/announcements", icon: Megaphone },
-    {
-      title: "Settings",
-  
-  url: "/researcher/settings",
-      icon: Settings,
-    },
   ],
   Reviewer: [
     {
@@ -56,16 +42,6 @@ export const sidebarMenus = {
   url: "/reviewerreviews",
       icon: BookCopy,
     },
-    {
-      title: "Message",
-  url: "/smessages",
-      icon: MessageCircle,
-    },
   { title: "Announcements", url: "/announcements", icon: Megaphone },
-    {
-      title: "Settings",
-  url: "/reviewer/settings",
-      icon: Settings,
-    },
   ],
 };

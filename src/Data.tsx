@@ -5,9 +5,7 @@ import {
   GalleryVerticalEnd,
   LayoutDashboard,
   PencilRuler,
-  Settings,
   User,
-  MessageCircle,
   type LucideIcon,
 } from "lucide-react"
 
@@ -147,19 +145,8 @@ export const data: AppData = {
       icon: Megaphone,
       isActive: true,
     },
-    {
-      title: "Message",
-      url: "/smessages",
-      icon: MessageCircle,
-      isActive: true,
-    },
   ],
   navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings,
-    },
   ],
   subm: [
     { month: "January", desktop: 186, mobile: 80 },
