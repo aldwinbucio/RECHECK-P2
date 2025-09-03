@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { submitDeviationReport } from '../../services/deviationReportService';
-import { supabase } from '../../lib/supabase';
+import { FileUploadService, UPLOAD_CONFIGS } from '../../services/fileUploadService';
 import useAuth from '@/hooks/useAuth';
 import { ClipboardList, CalendarDays, FileText, UploadCloud, AlertCircle } from 'lucide-react';
 
@@ -76,16 +76,19 @@ const DeviationReportForm: React.FC = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const uploadedUrls: string[] = [];
-      for (const file of files) {
-        // Upload to new 'storage' bucket
-        const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
-        const path = `deviation-reports/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${safeName}`;
-  const uploadRes = await supabase.storage.from('storage').upload(path, file, { upsert: false });
-  if (uploadRes.error) throw uploadRes.error;
-  const { data: pub } = supabase.storage.from('storage').getPublicUrl(path);
-  uploadedUrls.push(pub.publicUrl);
+      // Upload files using our new service
+      const uploadResults = await FileUploadService.uploadFiles(files, UPLOAD_CONFIGS.DEVIATIONS);
+      
+      // Check for upload errors
+      const failedUploads = uploadResults.filter(result => result.error);
+      if (failedUploads.length > 0) {
+        const errorMessages = failedUploads.map(result => result.error!);
+        setErrors({ ...errors, files: `Upload failed: ${errorMessages.join(', ')}` });
+        return;
       }
+
+      // Get successful upload URLs
+      const uploadedUrls = uploadResults.map(result => result.url);
 
   const { error } = await submitDeviationReport({
         protocolTitle: investigator.protocolTitle,

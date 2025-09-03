@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { FileUploadService, UPLOAD_CONFIGS } from '@/services/fileUploadService';
 import useAuth from '@/hooks/useAuth';
-import { Megaphone, Paperclip, Users, ShieldCheck, Globe2, X, Loader2 } from 'lucide-react';
+import { Megaphone, Paperclip, Users, ShieldCheck, Globe2, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 type Audience = 'students' | 'committee' | 'all';
 
@@ -10,6 +11,7 @@ export default function CreateAnnouncement() {
   const [description, setDescription] = useState('');
   const [audience, setAudience] = useState<Audience | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -21,6 +23,7 @@ export default function CreateAnnouncement() {
     setDescription('');
     setAudience(null);
     setAttachments([]);
+    setUploadErrors([]);
     setErrors({});
     setMessage(null);
   };
@@ -36,7 +39,26 @@ export default function CreateAnnouncement() {
 
   const handleFiles = (filesList: FileList | null) => {
     if (!filesList) return;
-    setAttachments(prev => [...prev, ...Array.from(filesList)]);
+    
+    const newFiles = Array.from(filesList);
+    const errors: string[] = [];
+    
+    // Validate each file
+    newFiles.forEach((file) => {
+      const validationError = FileUploadService.validateFile(file, UPLOAD_CONFIGS.ANNOUNCEMENTS);
+      if (validationError) {
+        errors.push(`${file.name}: ${validationError}`);
+      }
+    });
+    
+    // Only add valid files
+    const validFiles = newFiles.filter((file) => {
+      const validationError = FileUploadService.validateFile(file, UPLOAD_CONFIGS.ANNOUNCEMENTS);
+      return !validationError;
+    });
+    
+    setUploadErrors(errors);
+    setAttachments(prev => [...prev, ...validFiles]);
   };
 
   const removeFile = (idx: number) => {
@@ -45,17 +67,33 @@ export default function CreateAnnouncement() {
 
   const handleAnnounce = async () => {
     setMessage(null);
+    setUploadErrors([]);
     if (!validate()) return;
+    
     setLoading(true);
     try {
-      const urls: string[] = [];
-      for (const file of attachments) {
-        const key = `announcements/${Date.now()}-${file.name}`;
-        const { error: upErr } = await supabase.storage.from('announcements').upload(key, file, { upsert: true });
-        if (upErr) throw upErr;
-        const { data } = supabase.storage.from('announcements').getPublicUrl(key);
-        urls.push(data.publicUrl);
+      // Debug: Check if user is authenticated
+      console.log('User authentication status:', { 
+        user: user ? 'authenticated' : 'not authenticated',
+        userId: (user as any)?.id,
+        email: (user as any)?.email 
+      });
+      
+      // Upload attachments using our service
+      const uploadResults = await FileUploadService.uploadFiles(attachments, UPLOAD_CONFIGS.ANNOUNCEMENTS);
+      
+      // Check for upload errors
+      const failedUploads = uploadResults.filter(result => result.error);
+      if (failedUploads.length > 0) {
+        const errorMessages = failedUploads.map(result => result.error!);
+        console.error('Upload failed:', errorMessages);
+        setUploadErrors(errorMessages);
+        setMessage('Some files failed to upload. Please check console for details and verify your Supabase storage policies.');
+        return;
       }
+
+      // Get successful upload URLs
+      const urls = uploadResults.map(result => result.url);
 
       const payload: any = {
         title: title.trim(),
@@ -70,10 +108,10 @@ export default function CreateAnnouncement() {
       if (insertErr) throw insertErr;
 
       reset();
-      setMessage('Announcement published');
+      setMessage('Announcement published successfully!');
     } catch (err: any) {
-      console.error(err);
-      setMessage('Publish failed');
+      console.error('Error publishing announcement:', err);
+      setMessage(`Publish failed: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -158,12 +196,33 @@ export default function CreateAnnouncement() {
                 >
                   <Paperclip className="h-6 w-6 mx-auto text-blue-500 mb-2" />
                   <p className="text-xs text-gray-600">Drag & drop or click to browse</p>
+                  <p className="text-xs text-gray-500 mt-1">Max 10MB per file • PDF, Word, Excel, Images, Text</p>
                   <input id="announcement-files" type="file" multiple className="hidden" onChange={e => handleFiles(e.target.files)} />
                 </div>
+                
+                {/* Upload Errors */}
+                {uploadErrors.length > 0 && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-700 text-sm font-medium mb-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Upload Errors
+                    </div>
+                    <ul className="text-sm text-red-600 space-y-1">
+                      {uploadErrors.map((error, index) => (
+                        <li key={index} className="flex items-start gap-1">
+                          <span className="text-red-500 mt-0.5">•</span>
+                          <span>{error}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
                 {attachments.length > 0 && (
                   <ul className="mt-3 bg-white border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-auto text-sm">
                     {attachments.map((f,i) => (
                       <li key={i} className="flex items-center gap-3 px-3 py-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                         <span className="flex-1 truncate">{f.name}</span>
                         <span className="text-xs text-gray-400">{(f.size/1024).toFixed(1)} KB</span>
                         <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-red-500 p-1"><X className="h-4 w-4" /></button>
@@ -195,7 +254,14 @@ export default function CreateAnnouncement() {
           </div>
 
           {message && (
-            <div className={`text-sm px-4 py-3 rounded-lg border ${message.includes('failed') || message.toLowerCase().includes('error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>{message}</div>
+            <div className={`text-sm px-4 py-3 rounded-lg border flex items-center gap-2 ${message.includes('failed') || message.toLowerCase().includes('error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+              {message.includes('failed') || message.toLowerCase().includes('error') ? (
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              ) : (
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+              )}
+              {message}
+            </div>
           )}
 
           <div className="flex items-center justify-end gap-3">
