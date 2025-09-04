@@ -32,7 +32,12 @@ const ResolutionDetail = () => {
                 setDeviation(null);
             } else {
                 setDeviation(data);
-                setAcknowledgment(data?.staff_acknowledgment || '');
+                // If resolution is in_progress (resubmitted), clear the acknowledgment field for new review
+                if (data?.resolution_status === 'in_progress') {
+                    setAcknowledgment('');
+                } else {
+                    setAcknowledgment(data?.staff_acknowledgment || '');
+                }
             }
         } catch (err) {
             console.error('Error:', err);
@@ -338,7 +343,7 @@ const ResolutionDetail = () => {
                 <div className="border-t pt-6">
                     <h3 className="text-xl font-bold mb-4 text-gray-800">Staff Review</h3>
                     
-                    {deviation.staff_acknowledgment ? (
+                    {(deviation.staff_acknowledgment && deviation.resolution_status !== 'in_progress') ? (
                         <div className="mb-6 p-4 border rounded-lg bg-gray-50">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="font-semibold text-gray-700">Your Assessment:</span>
@@ -358,6 +363,16 @@ const ResolutionDetail = () => {
                         </div>
                     ) : (
                         <div className="space-y-4">
+                            {deviation.resolution_status === 'in_progress' && deviation.staff_acknowledgment && (
+                                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-blue-800 font-medium">Previous Review:</p>
+                                    <p className="text-blue-700 text-sm mt-1">{deviation.staff_acknowledgment}</p>
+                                    <p className="text-blue-600 text-xs mt-2">
+                                        Researcher has resubmitted. Please review the updated response.
+                                    </p>
+                                </div>
+                            )}
+                            
                             <div>
                                 <label className="block font-semibold text-gray-700 mb-2">
                                     Assessment Notes <span className="text-red-500">*</span>

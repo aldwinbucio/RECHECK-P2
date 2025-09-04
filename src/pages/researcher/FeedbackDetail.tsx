@@ -32,6 +32,7 @@ const FeedbackDetail = () => {
             .eq('id', id)
             .single()
             .then(({ data }) => {
+                console.log('Deviation data:', data); // Debug log
                 setDeviation(data || null);
                 if (data) {
                     // Pre-populate form if resolution already exists
@@ -44,10 +45,22 @@ const FeedbackDetail = () => {
             });
     }, [id]);
 
-    const canResolve = deviation && deviation.severity && 
+    const canResolve = deviation && deviation.severity && deviation.severity.trim() !== '' &&
         (deviation.resolution_status === undefined || 
+         deviation.resolution_status === null ||
          deviation.resolution_status === 'pending' || 
-         deviation.resolution_status === 'rejected');
+         deviation.resolution_status === 'rejected') &&
+        (deviation.review?.trim() || deviation.corrective_action_feedback?.trim());
+
+    // Debug log
+    console.log('Can resolve check:', {
+        hasDeviation: !!deviation,
+        hasSeverity: !!(deviation?.severity && deviation.severity.trim() !== ''),
+        resolutionStatus: deviation?.resolution_status,
+        hasReview: !!(deviation?.review?.trim()),
+        hasCorrectiveActionFeedback: !!(deviation?.corrective_action_feedback?.trim()),
+        canResolve
+    });
 
     const isResolved = deviation?.resolution_status === 'resolved';
     const isInProgress = deviation?.resolution_status === 'in_progress';
@@ -503,9 +516,15 @@ const FeedbackDetail = () => {
                         </>
                     )}
 
-                    {!canResolve && !deviation.resolution_status && (
+                    {!canResolve && (!deviation.severity || deviation.severity.trim() === '' || (!deviation.review?.trim() && !deviation.corrective_action_feedback?.trim())) && (
                         <div className="text-center text-gray-500">
                             <p>No resolution action is currently available for this deviation.</p>
+                            {(!deviation.severity || deviation.severity.trim() === '') && (
+                                <p className="text-sm mt-2">This deviation has not been assessed by staff yet.</p>
+                            )}
+                            {deviation.severity && deviation.severity.trim() !== '' && (!deviation.review?.trim() && !deviation.corrective_action_feedback?.trim()) && (
+                                <p className="text-sm mt-2">Staff assessment is pending feedback.</p>
+                            )}
                         </div>
                     )}
                 </div>
