@@ -215,7 +215,7 @@ const RDashboard = () => {
             {/* My Submissions */}
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-lg text-gray-900">My Submissions</h2>
+                    <h2 className="font-semibold text-lg text-gray-900">My Submission</h2>
                     <button onClick={() => navigate('/researcher/submissions')} className="hidden md:inline-flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900">
                         View all
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
